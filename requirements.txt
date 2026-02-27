@@ -2,3 +2,4 @@ streamlit==1.32.2
 openai==1.13.3  # Bleib bei dieser, da sie stabil ist
 httpx==0.27.0   # Für advanced Timeout
 stripe==0.7.0  # Stabile Version für Python 3.13
+stripe==0.7.0
