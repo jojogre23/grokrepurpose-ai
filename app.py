@@ -1,5 +1,5 @@
 import streamlit as st
-from xai_sdk import Client  # Offizielles xAI-SDK
+from openai import OpenAI
 
 st.set_page_config(page_title="GrokRepurpose.ai", page_icon="🚀", layout="wide")
 st.title("🚀 GrokRepurpose.ai")
@@ -26,9 +26,10 @@ if st.button("✨ Jetzt mit Grok repurposen", type="primary", use_container_widt
         st.stop()
 
     with st.spinner("Grok arbeitet (10–60 Sekunden)..."):
-        client = Client(
+        client = OpenAI(
             api_key=api_key,
-            timeout=60.0  # Float-Timeout für Stabilität
+            base_url="https://api.x.ai/v1",
+            timeout=60.0  # Float-Timeout
         )
         
         prompt = f"""Du bist der beste Content-Repurposer der Welt (Grok-Stil: witzig, direkt, viral).
@@ -40,7 +41,7 @@ Erstelle exakt diese Formate:
 Jedes Format mit klarer Überschrift trennen."""
 
         response = client.chat.completions.create(
-            model="grok-4-0709",  # Aktuelles 2026-Model
+            model="grok-beta",  # Aktuelles Model
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
             max_tokens=4000
