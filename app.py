@@ -11,7 +11,22 @@ with st.sidebar:
     st.header("🔑 Dein xAI API-Key (Free Tier)")
     api_key = st.text_input("xAI Key von console.x.ai", type="password")
     st.caption("Kostenlos hier holen: [console.x.ai](https://console.x.ai)")
-
+st.divider()
+st.header("⭐ Pro (9 €/Monat – kein Key nötig)")
+if st.button("Jetzt upgraden"):
+    import stripe
+    stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{'price': 'your_price_id_here', 'quantity': 1}],  # Ersetze mit deiner Stripe Price-ID
+            mode='subscription',
+            success_url='https://grokrepurpose-ai.streamlit.app/?success=true',
+            cancel_url='https://grokrepurpose-ai.streamlit.app/'
+        )
+        st.markdown(f'<meta http-equiv="refresh" content="0; url={session.url}">', unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
 content = st.text_area("Paste deinen Blog, Transcript oder Notizen hier", height=300)
 
 formats = st.multiselect("Was soll erstellt werden?", 
