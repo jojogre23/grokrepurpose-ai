@@ -42,7 +42,7 @@ Erstelle exakt diese Formate:
 Jedes Format mit klarer Überschrift trennen."""
 
         response = client.chat.completions.create(
-            model="grok-beta",
+            model="grok-4-1-fast-reasoning",  # Aktuelles Model
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
             max_tokens=4000
