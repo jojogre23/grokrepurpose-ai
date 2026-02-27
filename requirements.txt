@@ -1,3 +1,2 @@
 streamlit==1.32.2
-xai-sdk==0.0.1  # Offizielles xAI-SDK
-httpx==0.27.0   # Für Timeout, falls nötig
+openai==1.13.3  # Bewährte Version für xAI-Kompatibilität
