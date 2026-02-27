@@ -1,5 +1,6 @@
 import streamlit as st
 from openai import OpenAI
+import httpx  # Für Timeout
 
 st.set_page_config(page_title="GrokRepurpose.ai", page_icon="🚀", layout="wide")
 st.title("🚀 GrokRepurpose.ai")
@@ -29,7 +30,7 @@ if st.button("✨ Jetzt mit Grok repurposen", type="primary", use_container_widt
         client = OpenAI(
             api_key=api_key,
             base_url="https://api.x.ai/v1",
-            timeout=60.0  # Float-Timeout
+            timeout=httpx.Timeout(60.0)  # httpx.Timeout fix den TypeError
         )
         
         prompt = f"""Du bist der beste Content-Repurposer der Welt (Grok-Stil: witzig, direkt, viral).
