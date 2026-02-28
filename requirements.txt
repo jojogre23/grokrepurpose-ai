@@ -1,4 +1,9 @@
 streamlit==1.32.2
-openai==1.13.3  # Bleib bei dieser, da sie stabil ist
-httpx==0.27.0   # Für advanced Timeout
-stripe==8.7.0
+openai==1.13.3
+httpx==0.27.0
+PyPDF2==3.0.1
+tweepy==4.14.0
+requests-oauthlib==1.3.1
+facebook-sdk==3.1.0
+stripe==14.4.0
+requests==2.31.0
