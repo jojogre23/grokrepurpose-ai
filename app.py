@@ -1,3 +1,15 @@
+st.markdown("""
+<style>
+.big-font {
+    font-size:50px !important;
+}
+.stButton > button {
+    background-color: #0b84a5;
+    color: white;
+    border-radius: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
 import streamlit as st
 from openai import OpenAI
 import httpx
