@@ -1,45 +1,99 @@
-st.markdown("""
-<style>
-.big-font {
-    font-size:50px !important;
-}
-.stButton > button {
-    background-color: #0b84a5;
-    color: white;
-    border-radius: 10px;
-}
-</style>
-""", unsafe_allow_html=True)
 import streamlit as st
 from openai import OpenAI
 import httpx
+from PyPDF2 import PdfReader
+import tweepy
+from requests_oauthlib import OAuth1Session
+import facebook
+import requests
 
 st.set_page_config(page_title="GrokRepurpose.ai", page_icon="🚀", layout="wide")
 st.title("🚀 GrokRepurpose.ai")
 st.markdown("**1 langer Text → 30+ virale Posts in Sekunden mit Grok**")
 
-# Sidebar für API-Key
+# Sidebar für API-Key, Upgrades und Social-Verbinden
 with st.sidebar:
     st.header("🔑 Dein xAI API-Key (Free Tier)")
     api_key = st.text_input("xAI Key von console.x.ai", type="password")
     st.caption("Kostenlos hier holen: [console.x.ai](https://console.x.ai)")
-st.divider()
-st.header("⭐ Pro (9 €/Monat – kein Key nötig)")
-if st.button("Jetzt upgraden"):
-    import stripe
-    stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
-    try:
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{'price': 'your_price_id_here', 'quantity': 1}],  # Ersetze mit deiner Stripe Price-ID
-            mode='subscription',
-            success_url='https://grokrepurpose-ai.streamlit.app/?success=true',
-            cancel_url='https://grokrepurpose-ai.streamlit.app/'
-        )
-        st.markdown(f'<meta http-equiv="refresh" content="0; url={session.url}">', unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+
+    st.divider()
+    st.header("⭐ Pro (9 €/Monat – kein Key nötig)")
+    if st.button("Jetzt upgraden"):
+        import stripe
+        stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
+        try:
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{'price': 'your_price_id', 'quantity': 1}],  # Ersetze with deiner Price-ID
+                mode='subscription',
+                success_url='https://grokrepurpose-ai.streamlit.app/?success=true',
+                cancel_url='https://grokrepurpose-ai.streamlit.app/'
+            )
+            st.markdown(f'<meta http-equiv="refresh" content="0; url={session.url}">', unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+
+    st.divider()
+    st.header("Social Accounts verbinden")
+    # Twitter Credentials (aus developer.twitter.com)
+    TWITTER_API_KEY = "your_twitter_api_key"
+    TWITTER_API_SECRET = "your_twitter_api_secret"
+    if st.button("Twitter verbinden"):
+        oauth = OAuth1Session(TWITTER_API_KEY, client_secret=TWITTER_API_SECRET)
+        fetch_response = oauth.fetch_request_token('https://api.twitter.com/oauth/request_token?oauth_callback=https://grokrepurpose-ai.streamlit.app')
+        resource_owner_key = fetch_response.get('oauth_token')
+        resource_owner_secret = fetch_response.get('oauth_token_secret')
+        authorization_url = oauth.authorization_url('https://api.twitter.com/oauth/authorize')
+        st.markdown(f'[Twitter verbinden]({authorization_url})')
+        st.session_state['twitter_resource_owner_key'] = resource_owner_key
+        st.session_state['twitter_resource_owner_secret'] = resource_owner_secret
+
+    # Twitter Callback Handling
+    if 'oauth_verifier' in st.experimental_get_query_params():
+        verifier = st.experimental_get_query_params()['oauth_verifier'][0]
+        oauth = OAuth1Session(TWITTER_API_KEY, client_secret=TWITTER_API_SECRET,
+                              resource_owner_key=st.session_state['twitter_resource_owner_key'],
+                              resource_owner_secret=st.session_state['twitter_resource_owner_secret'],
+                              verifier=verifier)
+        oauth_tokens = oauth.fetch_access_token('https://api.twitter.com/oauth/access_token')
+        st.session_state['twitter_access_token'] = oauth_tokens['oauth_token']
+        st.session_state['twitter_access_secret'] = oauth_tokens['oauth_token_secret']
+        st.success("Twitter verbunden!")
+
+    # Facebook/Instagram Credentials (aus developers.facebook.com)
+    FACEBOOK_APP_ID = "your_facebook_app_id"
+    FACEBOOK_APP_SECRET = "your_facebook_app_secret"
+    if st.button("Facebook/Instagram verbinden"):
+        dialog_url = f"https://www.facebook.com/v20.0/dialog/oauth?client_id={FACEBOOK_APP_ID}&redirect_uri=https://grokrepurpose-ai.streamlit.app&scope=publish_to_groups,pages_manage_posts,instagram_basic,instagram_content_publish"
+        st.markdown(f'[Facebook/Instagram verbinden]({dialog_url})')
+
+    if 'code' in st.experimental_get_query_params():
+        code = st.experimental_get_query_params()['code'][0]
+        access_url = f"https://graph.facebook.com/v20.0/oauth/access_token?client_id={FACEBOOK_APP_ID}&client_secret={FACEBOOK_APP_SECRET}&redirect_uri=https://grokrepurpose-ai.streamlit.app&code={code}"
+        response = requests.get(access_url)
+        if 'access_token' in response.json():
+            st.session_state['facebook_access_token'] = response.json()['access_token']
+            st.success("Facebook/Instagram verbunden!")
+        else:
+            st.error("Fehler bei Facebook-Verbindung")
+
+# Hauptinhalt: Text-Input und File-Upload
 content = st.text_area("Paste deinen Blog, Transcript oder Notizen hier", height=300)
+
+uploaded_file = st.file_uploader("Lade eine Datei hoch (Bild oder PDF)", type=["jpg", "png", "pdf"])
+if uploaded_file is not None:
+    if uploaded_file.type == "application/pdf":
+        reader = PdfReader(uploaded_file)
+        extracted_text = ""
+        for page in reader.pages:
+            extracted_text += page.extract_text() + "\n"
+        content += extracted_text  # Füge zu Content hinzu
+        st.write("Extrahierter Text aus PDF hinzugefügt!")
+    elif uploaded_file.type in ["image/jpeg", "image/png"]:
+        image_path = uploaded_file.name  # Speichere für Posting
+        st.image(uploaded_file, caption="Hochgeladenes Bild")
+        st.session_state['uploaded_image'] = uploaded_file
 
 formats = st.multiselect("Was soll erstellt werden?", 
     ["X/Twitter Thread", "LinkedIn Post", "10 Instagram Captions", "Email Newsletter", "YouTube Shorts Scripts", "SEO Summary"],
@@ -69,7 +123,7 @@ Erstelle exakt diese Formate:
 Jedes Format mit klarer Überschrift trennen."""
 
         response = client.chat.completions.create(
-            model="grok-4-1-fast-reasoning",  # Aktuelles Model
+            model="grok-4-1-fast-reasoning",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
             max_tokens=4000
@@ -80,18 +134,35 @@ Jedes Format mit klarer Überschrift trennen."""
     st.success("✅ Fertig!")
     st.markdown(result)
     st.download_button("📥 Als TXT herunterladen", result, "grok_repurposed.txt")
-uploaded_file = st.file_uploader("Lade eine Datei hoch (Bild oder PDF)", type=["jpg", "png", "pdf"])
-if uploaded_file is not None:
-    if uploaded_file.type == "application/pdf":
-        # PDF verarbeiten (Beispiel: Text extrahieren mit PyPDF2 - füge in requirements.txt PyPDF2==3.0.1 hinzu)
-        from PyPDF2 import PdfReader
-        reader = PdfReader(uploaded_file)
-        content = ""
-        for page in reader.pages:
-            content += page.extract_text()
-        st.write("Extrahierter Text aus PDF: " + content[:500])  # Kurze Vorschau
-    elif uploaded_file.type in ["image/jpeg", "image/png"]:
-        # Bild verarbeiten (Beispiel: Anzeigen)
-        st.image(uploaded_file, caption="Hochgeladenes Bild")
-    # Integriere in deinen Prompt: Nutze den content aus der Datei für Repurposing
-PyPDF2==3.0.1  # Für PDF-Verarbeitung
+    st.session_state['result'] = result
+
+# Social Posting nach Repurposing
+if 'result' in st.session_state:
+    result = st.session_state['result']
+    image_path = st.session_state.get('uploaded_image', None)
+    
+    if st.session_state.get('twitter_access_token'):
+        if st.button("Auf Twitter posten"):
+            auth = tweepy.OAuth1UserHandler(TWITTER_API_KEY, TWITTER_API_SECRET, st.session_state['twitter_access_token'], st.session_state['twitter_access_secret'])
+            api = tweepy.API(auth)
+            if image_path:
+                api.update_status_with_media(status=result, filename=image_path.name, file=image_path)
+            else:
+                api.update_status(status=result)
+            st.success("Auf Twitter gepostet!")
+
+    if st.session_state.get('facebook_access_token'):
+        if st.button("Auf Facebook posten"):
+            graph = facebook.GraphAPI(st.session_state['facebook_access_token'])
+            graph.put_object("me", "feed", message=result)
+            st.success("Auf Facebook gepostet!")
+
+        if st.button("Auf Instagram posten"):
+            graph = facebook.GraphAPI(st.session_state['facebook_access_token'])
+            # Ersetze mit deiner Instagram Business ID
+            instagram_id = "your_instagram_business_id"
+            if image_path:
+                graph.put_object(instagram_id, "media", caption=result, image_url=image_path)  # Für Image-Posts
+            else:
+                st.error("Für Instagram Post benötigst du ein Bild!")
+            st.success("Auf Instagram gepostet!")
