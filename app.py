@@ -68,3 +68,17 @@ Jedes Format mit klarer Überschrift trennen."""
     st.success("✅ Fertig!")
     st.markdown(result)
     st.download_button("📥 Als TXT herunterladen", result, "grok_repurposed.txt")
+uploaded_file = st.file_uploader("Lade eine Datei hoch (Bild oder PDF)", type=["jpg", "png", "pdf"])
+if uploaded_file is not None:
+    if uploaded_file.type == "application/pdf":
+        # PDF verarbeiten (Beispiel: Text extrahieren mit PyPDF2 - füge in requirements.txt PyPDF2==3.0.1 hinzu)
+        from PyPDF2 import PdfReader
+        reader = PdfReader(uploaded_file)
+        content = ""
+        for page in reader.pages:
+            content += page.extract_text()
+        st.write("Extrahierter Text aus PDF: " + content[:500])  # Kurze Vorschau
+    elif uploaded_file.type in ["image/jpeg", "image/png"]:
+        # Bild verarbeiten (Beispiel: Anzeigen)
+        st.image(uploaded_file, caption="Hochgeladenes Bild")
+    # Integriere in deinen Prompt: Nutze den content aus der Datei für Repurposing
