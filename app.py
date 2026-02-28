@@ -94,4 +94,4 @@ if uploaded_file is not None:
         # Bild verarbeiten (Beispiel: Anzeigen)
         st.image(uploaded_file, caption="Hochgeladenes Bild")
     # Integriere in deinen Prompt: Nutze den content aus der Datei für Repurposing
-PyPDF2==3.0.1
+PyPDF2==3.0.1  # Für PDF-Verarbeitung
