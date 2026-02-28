@@ -11,7 +11,7 @@ st.set_page_config(page_title="GrokRepurpose.ai", page_icon="🚀", layout="wide
 st.title("🚀 GrokRepurpose.ai")
 st.markdown("**1 langer Text → 30+ virale Posts in Sekunden mit Grok**")
 
-# Sidebar für API-Key, Upgrades und Social-Verbinden
+# Sidebar
 with st.sidebar:
     st.header("🔑 Dein xAI API-Key (Free Tier)")
     api_key = st.text_input("xAI Key von console.x.ai", type="password")
@@ -25,7 +25,7 @@ with st.sidebar:
         try:
             session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
-                line_items=[{'price': 'your_price_id', 'quantity': 1}],  # Ersetze with deiner Price-ID
+                line_items=[{'price': 'your_price_id', 'quantity': 1}],  # Ersetze mit deiner Stripe Price-ID
                 mode='subscription',
                 success_url='https://grokrepurpose-ai.streamlit.app/?success=true',
                 cancel_url='https://grokrepurpose-ai.streamlit.app/'
@@ -36,8 +36,8 @@ with st.sidebar:
 
     st.divider()
     st.header("Social Accounts verbinden")
-    # Twitter Credentials (aus developer.twitter.com)
-    TWITTER_API_KEY = "your_twitter_api_key"
+    # Twitter
+    TWITTER_API_KEY = "your_twitter_api_key"  # Aus developer.twitter.com
     TWITTER_API_SECRET = "your_twitter_api_secret"
     if st.button("Twitter verbinden"):
         oauth = OAuth1Session(TWITTER_API_KEY, client_secret=TWITTER_API_SECRET)
@@ -49,7 +49,6 @@ with st.sidebar:
         st.session_state['twitter_resource_owner_key'] = resource_owner_key
         st.session_state['twitter_resource_owner_secret'] = resource_owner_secret
 
-    # Twitter Callback Handling
     if 'oauth_verifier' in st.experimental_get_query_params():
         verifier = st.experimental_get_query_params()['oauth_verifier'][0]
         oauth = OAuth1Session(TWITTER_API_KEY, client_secret=TWITTER_API_SECRET,
@@ -61,8 +60,8 @@ with st.sidebar:
         st.session_state['twitter_access_secret'] = oauth_tokens['oauth_token_secret']
         st.success("Twitter verbunden!")
 
-    # Facebook/Instagram Credentials (aus developers.facebook.com)
-    FACEBOOK_APP_ID = "your_facebook_app_id"
+    # Facebook/Instagram
+    FACEBOOK_APP_ID = "your_facebook_app_id"  # Aus developers.facebook.com
     FACEBOOK_APP_SECRET = "your_facebook_app_secret"
     if st.button("Facebook/Instagram verbinden"):
         dialog_url = f"https://www.facebook.com/v20.0/dialog/oauth?client_id={FACEBOOK_APP_ID}&redirect_uri=https://grokrepurpose-ai.streamlit.app&scope=publish_to_groups,pages_manage_posts,instagram_basic,instagram_content_publish"
@@ -76,9 +75,9 @@ with st.sidebar:
             st.session_state['facebook_access_token'] = response.json()['access_token']
             st.success("Facebook/Instagram verbunden!")
         else:
-            st.error("Fehler bei Facebook-Verbindung")
+            st.error("Fehler bei Verbindung")
 
-# Hauptinhalt: Text-Input und File-Upload
+# Hauptbereich
 content = st.text_area("Paste deinen Blog, Transcript oder Notizen hier", height=300)
 
 uploaded_file = st.file_uploader("Lade eine Datei hoch (Bild oder PDF)", type=["jpg", "png", "pdf"])
@@ -88,12 +87,11 @@ if uploaded_file is not None:
         extracted_text = ""
         for page in reader.pages:
             extracted_text += page.extract_text() + "\n"
-        content += extracted_text  # Füge zu Content hinzu
-        st.write("Extrahierter Text aus PDF hinzugefügt!")
+        content += extracted_text
+        st.write("Text aus PDF extrahiert!")
     elif uploaded_file.type in ["image/jpeg", "image/png"]:
-        image_path = uploaded_file.name  # Speichere für Posting
         st.image(uploaded_file, caption="Hochgeladenes Bild")
-        st.session_state['uploaded_image'] = uploaded_file
+        st.session_state['uploaded_image'] = uploaded_file.getvalue()  # Bytes für Posting
 
 formats = st.multiselect("Was soll erstellt werden?", 
     ["X/Twitter Thread", "LinkedIn Post", "10 Instagram Captions", "Email Newsletter", "YouTube Shorts Scripts", "SEO Summary"],
@@ -136,17 +134,17 @@ Jedes Format mit klarer Überschrift trennen."""
     st.download_button("📥 Als TXT herunterladen", result, "grok_repurposed.txt")
     st.session_state['result'] = result
 
-# Social Posting nach Repurposing
+# Posting auf Social (mit Bild, wenn hochgeladen)
 if 'result' in st.session_state:
     result = st.session_state['result']
-    image_path = st.session_state.get('uploaded_image', None)
+    uploaded_image = st.session_state.get('uploaded_image', None)
     
     if st.session_state.get('twitter_access_token'):
         if st.button("Auf Twitter posten"):
-            auth = tweepy.OAuth1UserHandler(TWITTER_API_KEY, TWITTER_API_SECRET, st.session_state['twitter_access_token'], st.session_state['twitter_access_secret'])
+            auth = tweepy.OAuth1UserHandler("your_twitter_api_key", "your_twitter_api_secret", st.session_state['twitter_access_token'], st.session_state['twitter_access_secret'])
             api = tweepy.API(auth)
-            if image_path:
-                api.update_status_with_media(status=result, filename=image_path.name, file=image_path)
+            if uploaded_image:
+                api.update_status_with_media(status=result, filename="image.jpg", file=uploaded_image)
             else:
                 api.update_status(status=result)
             st.success("Auf Twitter gepostet!")
@@ -159,10 +157,10 @@ if 'result' in st.session_state:
 
         if st.button("Auf Instagram posten"):
             graph = facebook.GraphAPI(st.session_state['facebook_access_token'])
-            # Ersetze mit deiner Instagram Business ID
-            instagram_id = "your_instagram_business_id"
-            if image_path:
-                graph.put_object(instagram_id, "media", caption=result, image_url=image_path)  # Für Image-Posts
+            instagram_id = "your_instagram_business_id"  # Ersetze mit deiner ID
+            if uploaded_image:
+                media = graph.post(path=f"{instagram_id}/media", caption=result, image_url=uploaded_image)  # Für Image-Posts
+                publish = graph.post(path=f"{instagram_id}/media_publish", creation_id=media['id'])
+                st.success("Auf Instagram gepostet!")
             else:
-                st.error("Für Instagram Post benötigst du ein Bild!")
-            st.success("Auf Instagram gepostet!")
+                st.error("Bild erforderlich für Instagram!")
