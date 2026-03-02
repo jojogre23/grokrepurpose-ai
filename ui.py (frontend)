@@ -1,0 +1,16 @@
+import nicegui as ui
+
+async def main_page():
+    ui.label("GrokRepurpose.ai").style('font-size: 2em')
+    content = ui.textarea("Paste deinen Content")
+    api_key = ui.input("xAI API-Key", password=True)
+    uploaded_file = await ui.upload("Bild oder PDF hochladen")
+
+    if ui.button("Repurposen"):
+        # Call FastAPI Backend
+        response = await requests.post("https://grokrepurpose-ai.vercel.app/repurpose", data={"content": content.value, "api_key": api_key.value}, files={"uploaded_file": uploaded_file})
+        ui.label(response.json()["result"])
+
+    # Add Social Buttons similarly
+
+ui.run()
