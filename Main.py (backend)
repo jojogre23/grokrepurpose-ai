@@ -1,0 +1,62 @@
+from fastapi import FastAPI, UploadFile, Form, File
+from openai import OpenAI
+import httpx
+from PyPDF2 import PdfReader
+import tweepy
+from requests_oauthlib import OAuth1Session
+import facebook
+import requests
+from io import BytesIO
+
+app = FastAPI()
+
+@app.post("/repurpose")
+async def repurpose(content: str = Form(...), uploaded_file: UploadFile = File(None), api_key: str = Form(...)):
+    extra_content = ""
+    uploaded_image = None
+    if uploaded_file:
+        if uploaded_file.content_type == "application/pdf":
+            reader = PdfReader(BytesIO(await uploaded_file.read()))
+            for page in reader.pages:
+                extra_content += page.extract_text() + "\n"
+        elif uploaded_file.content_type in ["image/jpeg", "image/png"]:
+            uploaded_image = await uploaded_file.read()
+
+    content += extra_content
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.x.ai/v1",
+        timeout=httpx.Timeout(60.0)
+    )
+    
+    prompt = f"""Du bist der beste Content-Repurposer der Welt (Grok-Stil: witzig, direkt, viral).
+Inhalt: {content}
+
+Erstelle exakt diese Formate:
+- X/Twitter Thread
+- LinkedIn Post
+
+Jedes Format mit klarer Überschrift trennen."""
+
+    response = client.chat.completions.create(
+        model="grok-4-1-fast-reasoning",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.8,
+        max_tokens=4000
+    )
+    
+    result = response.choices[0].message.content
+    return {"result": result, "image": uploaded_image is not None}
+
+@app.get("/connect_twitter")
+def connect_twitter():
+    # OAuth-Logic here (return URL)
+    oauth = OAuth1Session("your_twitter_api_key", client_secret="your_twitter_api_secret")
+    fetch_response = oauth.fetch_request_token('https://api.twitter.com/oauth/request_token?oauth_callback=https://grokrepurpose-ai.vercel.app/callback_twitter')
+    authorization_url = oauth.authorization_url('https://api.twitter.com/oauth/authorize')
+    return {"url": authorization_url}
+
+# Weitere Endpoints für Callback, Facebook etc. ähnlich adden
+
+# Stripe, Posting-Endpoints adden ähnlich
